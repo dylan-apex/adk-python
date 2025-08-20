@@ -309,7 +309,7 @@ def get_fast_api_app(
       from a2a.server.apps import A2AStarletteApplication
       from a2a.server.request_handlers import DefaultRequestHandler
       from a2a.server.tasks import InMemoryTaskStore
-      from a2a.types import AgentCard, JSONRPCRequest
+      from a2a.types import AgentCard
       from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH
       from starlette.responses import Response
 
@@ -376,7 +376,13 @@ def get_fast_api_app(
           )
 
           for new_route in routes:
-            app.add_api_route(new_route.path, new_route.endpoint, name=new_route.name, methods=new_route.methods, tags=["A2A Endpoints"])
+            app.add_api_route(
+                new_route.path,
+                new_route.endpoint,
+                name=new_route.name,
+                methods=new_route.methods,
+                tags=["A2A Endpoints"],
+            )
 
           logger.info("Successfully configured A2A agent: %s", app_name)
 
