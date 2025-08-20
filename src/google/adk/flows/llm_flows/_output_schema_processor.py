@@ -81,10 +81,12 @@ def create_final_model_response_event(
   final_event = Event(
       author=invocation_context.agent.name,
       invocation_id=invocation_context.invocation_id,
+      branch=invocation_context.branch,
+      content=types.Content(
+          role='model', parts=[types.Part(text=json_response)]
+      ),
   )
-  final_event.content = types.Content(
-      role='model', parts=[types.Part(text=json_response)]
-  )
+
   return final_event
 
 
