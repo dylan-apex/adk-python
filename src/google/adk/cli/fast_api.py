@@ -311,7 +311,6 @@ def get_fast_api_app(
       from a2a.server.tasks import InMemoryTaskStore
       from a2a.types import AgentCard
       from a2a.utils.constants import AGENT_CARD_WELL_KNOWN_PATH
-      from starlette.responses import Response
 
       from ..a2a.executor.a2a_agent_executor import A2aAgentExecutor
 
