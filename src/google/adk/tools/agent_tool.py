@@ -21,6 +21,7 @@ from google.genai import types
 from pydantic import BaseModel
 from pydantic import ConfigDict
 from pydantic import model_validator
+from pydantic import TypeAdapter
 from typing_extensions import override
 
 from . import _automatic_function_calling_util
@@ -113,7 +114,7 @@ class AgentTool(BaseTool):
       tool_context.actions.skip_summarization = True
 
     if isinstance(self.agent, LlmAgent) and self.agent.input_schema:
-      input_value = self.agent.input_schema.model_validate(args)
+      input_value = TypeAdapter(self.agent.input_schema).validate_python(args)
       content = types.Content(
           role='user',
           parts=[
@@ -157,9 +158,13 @@ class AgentTool(BaseTool):
       return ''
     merged_text = '\n'.join(p.text for p in last_event.content.parts if p.text)
     if isinstance(self.agent, LlmAgent) and self.agent.output_schema:
-      tool_result = self.agent.output_schema.model_validate_json(
+      validated_result = TypeAdapter(self.agent.output_schema).validate_json(
           merged_text
-      ).model_dump(exclude_none=True)
+      )
+      if isinstance(validated_result, BaseModel):
+        tool_result = validated_result.model_dump(exclude_none=True)
+      else:
+        tool_result = validated_result
     else:
       tool_result = merged_text
     return tool_result

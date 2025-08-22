@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+from typing import Literal
+from typing import Union
+
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.llm_agent import Agent
 from google.adk.agents.sequential_agent import SequentialAgent
@@ -216,6 +219,168 @@ def test_custom_schema():
 @mark.parametrize(
     'env_variables',
     [
+        'GOOGLE_AI',
+        # 'VERTEX'
+    ],
+    indirect=True,
+)
+def test_custom_schema_with_union():
+  """Tests if agent can have a Union type in output_schema."""
+
+  class CustomInput(BaseModel):
+    custom_input: str
+
+  class CustomOutput(BaseModel):
+    custom_output: str
+
+  class CustomOutput2(BaseModel):
+    custom_output2: str
+
+  # --- Test Case 1: Model returns the first type in the Union ---
+  mock_model_1 = testing_utils.MockModel.create(
+      responses=[
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input': 'test_union_1'}
+          ),
+          '{"custom_output": "response_union_1"}',  # Matches CustomOutput
+          'Final response after union output 1.',
+      ]
+  )
+
+  tool_agent = Agent(
+      name='tool_agent',
+      model=mock_model_1,
+      input_schema=CustomInput,
+      output_schema=Union[CustomOutput, CustomOutput2, Literal['option3']],
+      output_key='tool_output_union',
+  )
+
+  root_agent = Agent(
+      name='root_agent',
+      model=mock_model_1,
+      tools=[AgentTool(agent=tool_agent)],
+  )
+
+  runner = testing_utils.InMemoryRunner(root_agent)
+  events = runner.run('test_union_input_1')
+
+  simplified_events = testing_utils.simplify_events(events)
+  assert simplified_events == [
+      (
+          'root_agent',
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input': 'test_union_1'}
+          ),
+      ),
+      (
+          'root_agent',
+          Part.from_function_response(
+              name='tool_agent',
+              response={'custom_output': 'response_union_1'},
+          ),
+      ),
+      ('root_agent', 'Final response after union output 1.'),
+  ]
+  assert runner.session.state['tool_output_union'] == {
+      'custom_output': 'response_union_1'
+  }
+  assert len(mock_model_1.requests) == 3
+  assert (
+      mock_model_1.requests[1].config.response_schema
+      == Union[CustomOutput, CustomOutput2, Literal['option3']]
+  )
+
+  # --- Test Case 2: Model returns the second type in the Union ---
+  mock_model_2 = testing_utils.MockModel.create(
+      responses=[
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input': 'test_union_2'}
+          ),
+          '{"custom_output2": "response_union_2"}',  # Matches CustomOutput2
+          'Final response after union output 2.',
+      ]
+  )
+
+  # Re-configure the agent with the new mock model
+  tool_agent.model = mock_model_2
+  root_agent.model = mock_model_2
+
+  runner_2 = testing_utils.InMemoryRunner(root_agent)
+  events_2 = runner_2.run('test_union_input_2')
+
+  simplified_events_2 = testing_utils.simplify_events(events_2)
+  assert simplified_events_2 == [
+      (
+          'root_agent',
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input': 'test_union_2'}
+          ),
+      ),
+      (
+          'root_agent',
+          Part.from_function_response(
+              name='tool_agent',
+              response={'custom_output2': 'response_union_2'},
+          ),
+      ),
+      ('root_agent', 'Final response after union output 2.'),
+  ]
+  assert runner_2.session.state['tool_output_union'] == {
+      'custom_output2': 'response_union_2'
+  }
+  assert len(mock_model_2.requests) == 3
+  assert (
+      mock_model_2.requests[1].config.response_schema
+      == Union[CustomOutput, CustomOutput2, Literal['option3']]
+  )
+
+  # --- Test Case 3: Model returns the literal type in the Union ---
+  mock_model_3 = testing_utils.MockModel.create(
+      responses=[
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input': 'test_union_3'}
+          ),
+          '"option3"',  # Matches Literal['option3']
+          'Final response after literal output.',
+      ]
+  )
+
+  # Re-configure the agent with the new mock model
+  tool_agent.model = mock_model_3
+  root_agent.model = mock_model_3
+
+  runner_3 = testing_utils.InMemoryRunner(root_agent)
+  events_3 = runner_3.run('test_union_input_3')
+
+  simplified_events_3 = testing_utils.simplify_events(events_3)
+  assert simplified_events_3 == [
+      (
+          'root_agent',
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input': 'test_union_3'}
+          ),
+      ),
+      (
+          'root_agent',
+          Part.from_function_response(
+              name='tool_agent',
+              response={'result': 'option3'},
+          ),
+      ),
+      ('root_agent', 'Final response after literal output.'),
+  ]
+  # When the result is not a BaseModel, it's stored directly.
+  assert runner_3.session.state['tool_output_union'] == 'option3'
+  assert len(mock_model_3.requests) == 3
+  assert (
+      mock_model_3.requests[1].config.response_schema
+      == Union[CustomOutput, CustomOutput2, Literal['option3']]
+  )
+
+
+@mark.parametrize(
+    'env_variables',
+    [
         'VERTEX',  # Test VERTEX_AI variant
     ],
     indirect=True,
@@ -355,3 +520,124 @@ def test_agent_tool_response_schema_with_input_schema_no_output_vertex_ai():
   # Should have string response schema for VERTEX_AI when no output_schema
   assert declaration.response is not None
   assert declaration.response.type == types.Type.STRING
+
+@mark.parametrize(
+    'env_variables',
+    [
+        'GOOGLE_AI',
+        # 'VERTEX'
+    ],
+    indirect=True,
+)
+def test_custom_schema_with_union_input():
+  """Tests if agent can have a Union type in input_schema."""
+
+  class CustomInput1(BaseModel):
+    custom_input1: str
+
+  class CustomInput2(BaseModel):
+    custom_input2: str
+
+  mock_model = testing_utils.MockModel.create(
+      responses=[
+          Part.from_function_call(
+              name='tool_agent', args={'custom_input1': 'test_union_1'}
+          ),
+          'response1',
+          'response2',
+      ]
+  )
+
+  tool_agent = Agent(
+      name='tool_agent',
+      model=mock_model,
+      input_schema=Union[CustomInput1, CustomInput2],
+  )
+
+  root_agent = Agent(
+      name='root_agent',
+      model=mock_model,
+      tools=[AgentTool(agent=tool_agent)],
+  )
+
+  runner = testing_utils.InMemoryRunner(root_agent)
+  runner.run('test1')
+
+  assert len(mock_model.requests) == 3
+  # The second request is the tool agent request.
+  assert (
+      mock_model.requests[1].contents[0].parts[0].text
+      == '{"custom_input1":"test_union_1"}'
+  )
+
+@mark.parametrize(
+    'env_variables',
+    [
+        'GOOGLE_AI',
+    ],
+    indirect=True,
+)
+def test_custom_schema_with_union_in_model():
+  """Tests if agent can have a Union type in a field of a BaseModel."""
+
+  class MyInput(BaseModel):
+    my_field: Union[int, str]
+
+  class MyOutput(BaseModel):
+    my_field: Union[int, str]
+
+  # Test with int
+  mock_model_1 = testing_utils.MockModel.create(
+      responses=[
+          Part.from_function_call(
+              name='tool_agent', args={'my_field': 1}
+          ),
+          '{"my_field": 2}',
+          'response2',
+      ]
+  )
+
+  tool_agent = Agent(
+      name='tool_agent',
+      model=mock_model_1,
+      input_schema=MyInput,
+      output_schema=MyOutput,
+  )
+
+  root_agent = Agent(
+      name='root_agent',
+      model=mock_model_1,
+      tools=[AgentTool(agent=tool_agent)],
+  )
+
+  runner = testing_utils.InMemoryRunner(root_agent)
+  events = runner.run('test1')
+  simplified_events = testing_utils.simplify_events(events)
+
+  assert simplified_events == [
+      ('root_agent', Part.from_function_call(name='tool_agent', args={'my_field': 1})),
+      ('root_agent', Part.from_function_response(name='tool_agent', response={'my_field': 2})),
+      ('root_agent', 'response2'),
+  ]
+
+  # Test with str
+  mock_model_2 = testing_utils.MockModel.create(
+      responses=[
+          Part.from_function_call(
+              name='tool_agent', args={'my_field': 'a'}
+          ),
+          '{"my_field": "b"}',
+          'response2',
+      ]
+  )
+  tool_agent.model = mock_model_2
+  root_agent.model = mock_model_2
+  runner = testing_utils.InMemoryRunner(root_agent)
+  events = runner.run('test1')
+  simplified_events = testing_utils.simplify_events(events)
+
+  assert simplified_events == [
+      ('root_agent', Part.from_function_call(name='tool_agent', args={'my_field': 'a'})),
+      ('root_agent', Part.from_function_response(name='tool_agent', response={'my_field': 'b'})),
+      ('root_agent', 'response2'),
+  ]

@@ -53,13 +53,6 @@ def _is_builtin_primitive_or_compound(
   return annotation in _py_builtin_type_to_schema_type.keys()
 
 
-def _raise_for_any_of_if_mldev(schema: types.Schema):
-  if schema.any_of:
-    raise ValueError(
-        'AnyOf is not supported in function declaration schema for Google AI.'
-    )
-
-
 def _update_for_default_if_mldev(schema: types.Schema):
   if schema.default is not None:
     # TODO(kech): Remove this workaround once mldev supports default value.
@@ -74,7 +67,6 @@ def _raise_if_schema_unsupported(
     variant: GoogleLLMVariant, schema: types.Schema
 ):
   if variant == GoogleLLMVariant.GEMINI_API:
-    _raise_for_any_of_if_mldev(schema)
     _update_for_default_if_mldev(schema)
 
 

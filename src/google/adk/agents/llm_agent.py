@@ -33,6 +33,7 @@ from pydantic import BaseModel
 from pydantic import Field
 from pydantic import field_validator
 from pydantic import model_validator
+from pydantic import TypeAdapter
 from typing_extensions import override
 from typing_extensions import TypeAlias
 
@@ -180,9 +181,9 @@ class LlmAgent(BaseAgent):
   """
 
   # Controlled input/output configurations - Start
-  input_schema: Optional[type[BaseModel]] = None
+  input_schema: Optional[Any] = None
   """The input schema when agent is used as a tool."""
-  output_schema: Optional[type[BaseModel]] = None
+  output_schema: Optional[Any] = None
   """The output schema when agent replies.
 
   NOTE:
@@ -470,9 +471,11 @@ class LlmAgent(BaseAgent):
         # Do not attempt to parse it as JSON.
         if not result.strip():
           return
-        result = self.output_schema.model_validate_json(result).model_dump(
-            exclude_none=True
-        )
+        validated_result = TypeAdapter(self.output_schema).validate_json(result)
+        if isinstance(validated_result, BaseModel):
+          result = validated_result.model_dump(exclude_none=True)
+        else:
+          result = validated_result
       event.actions.state_delta[self.output_key] = result
 
   @model_validator(mode='after')

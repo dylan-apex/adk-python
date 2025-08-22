@@ -17,6 +17,7 @@
 from typing import Any
 from typing import cast
 from typing import Optional
+from typing import Union, Literal
 
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.invocation_context import InvocationContext
@@ -29,6 +30,10 @@ from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types
 from pydantic import BaseModel
 import pytest
+from google.adk.events.event import Event
+from google.adk.models.llm_response import LlmResponse
+from google.genai.types import Part
+from .. import testing_utils
 
 
 async def _create_readonly_context(
@@ -279,3 +284,46 @@ def test_allow_transfer_by_default():
 
   assert not agent.disallow_transfer_to_parent
   assert not agent.disallow_transfer_to_peers
+
+def test_output_schema_with_union():
+  """Tests if agent can have a Union type in output_schema."""
+
+  class CustomOutput1(BaseModel):
+    custom_output1: str
+
+  class CustomOutput2(BaseModel):
+    custom_output2: str
+
+  agent = LlmAgent(
+      name='test_agent',
+      output_schema=Union[CustomOutput1, CustomOutput2, Literal['option3']],
+      output_key='test_output',
+  )
+
+  # Test with the first type
+  event1 = Event(
+      author='test_agent',
+      content=types.Content(parts=[Part(text='{"custom_output1": "response1"}')]),
+  )
+  agent._LlmAgent__maybe_save_output_to_state(event1)
+  assert event1.actions.state_delta['test_output'] == {
+      'custom_output1': 'response1'
+  }
+
+  # Test with the second type
+  event2 = Event(
+      author='test_agent',
+      content=types.Content(parts=[Part(text='{"custom_output2": "response2"}')]),
+  )
+  agent._LlmAgent__maybe_save_output_to_state(event2)
+  assert event2.actions.state_delta['test_output'] == {
+      'custom_output2': 'response2'
+  }
+
+  # Test with the literal type
+  event3 = Event(
+      author='test_agent',
+      content=types.Content(parts=[Part(text='"option3"')]),
+  )
+  agent._LlmAgent__maybe_save_output_to_state(event3)
+  assert event3.actions.state_delta['test_output'] == 'option3'
