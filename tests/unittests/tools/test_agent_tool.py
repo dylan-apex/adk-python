@@ -567,7 +567,7 @@ def test_custom_schema_with_union_input():
 
 @mark.parametrize(
     'env_variables',
-    ['GOOGLE_AI', 'Vertex'],
+    ['GOOGLE_AI', 'VERTEX'],
     indirect=True,
 )
 def test_custom_schema_with_union_in_model():
