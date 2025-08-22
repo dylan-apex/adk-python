@@ -33,6 +33,7 @@ from .base_tool import BaseTool
 from .tool_configs import BaseToolConfig
 from .tool_configs import ToolArgsConfig
 from .tool_context import ToolContext
+from ._gemini_schema_util import validate_and_dump_schema
 
 if TYPE_CHECKING:
   from ..agents.base_agent import BaseAgent
@@ -115,12 +116,13 @@ class AgentTool(BaseTool):
 
     if isinstance(self.agent, LlmAgent) and self.agent.input_schema:
       input_value = TypeAdapter(self.agent.input_schema).validate_python(args)
+      text = TypeAdapter(self.agent.input_schema).dump_json(
+          input_value, exclude_none=True
+      ).decode('utf-8')
       content = types.Content(
           role='user',
           parts=[
-              types.Part.from_text(
-                  text=input_value.model_dump_json(exclude_none=True)
-              )
+              types.Part.from_text(text=text)
           ],
       )
     else:
@@ -158,13 +160,7 @@ class AgentTool(BaseTool):
       return ''
     merged_text = '\n'.join(p.text for p in last_event.content.parts if p.text)
     if isinstance(self.agent, LlmAgent) and self.agent.output_schema:
-      validated_result = TypeAdapter(self.agent.output_schema).validate_json(
-          merged_text
-      )
-      if isinstance(validated_result, BaseModel):
-        tool_result = validated_result.model_dump(exclude_none=True)
-      else:
-        tool_result = validated_result
+      tool_result = validate_and_dump_schema(self.agent.output_schema, merged_text)
     else:
       tool_result = merged_text
     return tool_result

@@ -52,6 +52,7 @@ from ..tools.base_toolset import BaseToolset
 from ..tools.function_tool import FunctionTool
 from ..tools.tool_configs import ToolConfig
 from ..tools.tool_context import ToolContext
+from ..tools._gemini_schema_util import validate_and_dump_schema
 from ..utils.context_utils import Aclosing
 from ..utils.feature_decorator import experimental
 from .base_agent import BaseAgent
@@ -471,11 +472,7 @@ class LlmAgent(BaseAgent):
         # Do not attempt to parse it as JSON.
         if not result.strip():
           return
-        validated_result = TypeAdapter(self.output_schema).validate_json(result)
-        if isinstance(validated_result, BaseModel):
-          result = validated_result.model_dump(exclude_none=True)
-        else:
-          result = validated_result
+        result = validate_and_dump_schema(self.output_schema, result)
       event.actions.state_delta[self.output_key] = result
 
   @model_validator(mode='after')
