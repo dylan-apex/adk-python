@@ -20,7 +20,9 @@ from typing import Optional
 
 from google.genai.types import JSONSchema
 from google.genai.types import Schema
-from pydantic import Field, BaseModel, TypeAdapter
+from pydantic import BaseModel
+from pydantic import Field
+from pydantic import TypeAdapter
 
 from ..utils.variant_utils import get_google_llm_variant
 
@@ -157,9 +159,10 @@ def _to_gemini_schema(openapi_schema: dict[str, Any]) -> Schema:
       api_option=get_google_llm_variant(),
   )
 
+
 def validate_and_dump_schema(schema: Any, json_data: str) -> Any:
-    """Validates json data against a schema and returns a serializable object."""
-    validated_result = TypeAdapter(schema).validate_json(json_data)
-    if isinstance(validated_result, BaseModel):
-        return validated_result.model_dump(exclude_none=True)
-    return validated_result
+  """Validates json data against a schema and returns a serializable object."""
+  validated_result = TypeAdapter(schema).validate_json(json_data)
+  if isinstance(validated_result, BaseModel):
+    return validated_result.model_dump(exclude_none=True)
+  return validated_result

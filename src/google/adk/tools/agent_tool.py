@@ -29,11 +29,11 @@ from ..agents.common_configs import AgentRefConfig
 from ..memory.in_memory_memory_service import InMemoryMemoryService
 from ..utils.context_utils import Aclosing
 from ._forwarding_artifact_service import ForwardingArtifactService
+from ._gemini_schema_util import validate_and_dump_schema
 from .base_tool import BaseTool
 from .tool_configs import BaseToolConfig
 from .tool_configs import ToolArgsConfig
 from .tool_context import ToolContext
-from ._gemini_schema_util import validate_and_dump_schema
 
 if TYPE_CHECKING:
   from ..agents.base_agent import BaseAgent
@@ -116,14 +116,14 @@ class AgentTool(BaseTool):
 
     if isinstance(self.agent, LlmAgent) and self.agent.input_schema:
       input_value = TypeAdapter(self.agent.input_schema).validate_python(args)
-      text = TypeAdapter(self.agent.input_schema).dump_json(
-          input_value, exclude_none=True
-      ).decode('utf-8')
+      text = (
+          TypeAdapter(self.agent.input_schema)
+          .dump_json(input_value, exclude_none=True)
+          .decode('utf-8')
+      )
       content = types.Content(
           role='user',
-          parts=[
-              types.Part.from_text(text=text)
-          ],
+          parts=[types.Part.from_text(text=text)],
       )
     else:
       content = types.Content(
@@ -160,7 +160,9 @@ class AgentTool(BaseTool):
       return ''
     merged_text = '\n'.join(p.text for p in last_event.content.parts if p.text)
     if isinstance(self.agent, LlmAgent) and self.agent.output_schema:
-      tool_result = validate_and_dump_schema(self.agent.output_schema, merged_text)
+      tool_result = validate_and_dump_schema(
+          self.agent.output_schema, merged_text
+      )
     else:
       tool_result = merged_text
     return tool_result
