@@ -19,7 +19,6 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.llm_agent import Agent
 from google.adk.agents.sequential_agent import SequentialAgent
 from google.adk.tools.agent_tool import AgentTool
-from google.adk.utils.variant_utils import GoogleLLMVariant
 from google.genai import types
 from google.genai.types import Part
 from pydantic import BaseModel
@@ -218,10 +217,7 @@ def test_custom_schema():
 
 @mark.parametrize(
     'env_variables',
-    [
-        'GOOGLE_AI',
-        'VERTEX'
-    ],
+    ['GOOGLE_AI', 'VERTEX'],
     indirect=True,
 )
 def test_custom_schema_with_union():
@@ -521,12 +517,10 @@ def test_agent_tool_response_schema_with_input_schema_no_output_vertex_ai():
   assert declaration.response is not None
   assert declaration.response.type == types.Type.STRING
 
+
 @mark.parametrize(
     'env_variables',
-    [
-        'GOOGLE_AI',
-        'VERTEX'
-    ],
+    ['GOOGLE_AI', 'VERTEX'],
     indirect=True,
 )
 def test_custom_schema_with_union_input():
@@ -570,12 +564,10 @@ def test_custom_schema_with_union_input():
       == '{"custom_input1":"test_union_1"}'
   )
 
+
 @mark.parametrize(
     'env_variables',
-    [
-        'GOOGLE_AI',
-        'Vertex'
-    ],
+    ['GOOGLE_AI', 'Vertex'],
     indirect=True,
 )
 def test_custom_schema_with_union_in_model():
@@ -590,9 +582,7 @@ def test_custom_schema_with_union_in_model():
   # Test with int
   mock_model_1 = testing_utils.MockModel.create(
       responses=[
-          Part.from_function_call(
-              name='tool_agent', args={'my_field': 1}
-          ),
+          Part.from_function_call(name='tool_agent', args={'my_field': 1}),
           '{"my_field": 2}',
           'response2',
       ]
@@ -616,17 +606,23 @@ def test_custom_schema_with_union_in_model():
   simplified_events = testing_utils.simplify_events(events)
 
   assert simplified_events == [
-      ('root_agent', Part.from_function_call(name='tool_agent', args={'my_field': 1})),
-      ('root_agent', Part.from_function_response(name='tool_agent', response={'my_field': 2})),
+      (
+          'root_agent',
+          Part.from_function_call(name='tool_agent', args={'my_field': 1}),
+      ),
+      (
+          'root_agent',
+          Part.from_function_response(
+              name='tool_agent', response={'my_field': 2}
+          ),
+      ),
       ('root_agent', 'response2'),
   ]
 
   # Test with str
   mock_model_2 = testing_utils.MockModel.create(
       responses=[
-          Part.from_function_call(
-              name='tool_agent', args={'my_field': 'a'}
-          ),
+          Part.from_function_call(name='tool_agent', args={'my_field': 'a'}),
           '{"my_field": "b"}',
           'response2',
       ]
@@ -638,7 +634,15 @@ def test_custom_schema_with_union_in_model():
   simplified_events = testing_utils.simplify_events(events)
 
   assert simplified_events == [
-      ('root_agent', Part.from_function_call(name='tool_agent', args={'my_field': 'a'})),
-      ('root_agent', Part.from_function_response(name='tool_agent', response={'my_field': 'b'})),
+      (
+          'root_agent',
+          Part.from_function_call(name='tool_agent', args={'my_field': 'a'}),
+      ),
+      (
+          'root_agent',
+          Part.from_function_response(
+              name='tool_agent', response={'my_field': 'b'}
+          ),
+      ),
       ('root_agent', 'response2'),
   ]

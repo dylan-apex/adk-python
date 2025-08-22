@@ -16,23 +16,23 @@
 
 from typing import Any
 from typing import cast
+from typing import Literal
 from typing import Optional
-from typing import Union, Literal
+from typing import Union
 
 from google.adk.agents.callback_context import CallbackContext
 from google.adk.agents.invocation_context import InvocationContext
 from google.adk.agents.llm_agent import LlmAgent
-from google.adk.agents.loop_agent import LoopAgent
 from google.adk.agents.readonly_context import ReadonlyContext
+from google.adk.events.event import Event
 from google.adk.models.llm_request import LlmRequest
 from google.adk.models.registry import LLMRegistry
 from google.adk.sessions.in_memory_session_service import InMemorySessionService
 from google.genai import types
+from google.genai.types import Part
 from pydantic import BaseModel
 import pytest
-from google.adk.events.event import Event
-from google.adk.models.llm_response import LlmResponse
-from google.genai.types import Part
+
 from .. import testing_utils
 
 
@@ -285,6 +285,7 @@ def test_allow_transfer_by_default():
   assert not agent.disallow_transfer_to_parent
   assert not agent.disallow_transfer_to_peers
 
+
 def test_output_schema_with_union():
   """Tests if agent can have a Union type in output_schema."""
 
@@ -303,7 +304,9 @@ def test_output_schema_with_union():
   # Test with the first type
   event1 = Event(
       author='test_agent',
-      content=types.Content(parts=[Part(text='{"custom_output1": "response1"}')]),
+      content=types.Content(
+          parts=[Part(text='{"custom_output1": "response1"}')]
+      ),
   )
   agent._LlmAgent__maybe_save_output_to_state(event1)
   assert event1.actions.state_delta['test_output'] == {
@@ -313,7 +316,9 @@ def test_output_schema_with_union():
   # Test with the second type
   event2 = Event(
       author='test_agent',
-      content=types.Content(parts=[Part(text='{"custom_output2": "response2"}')]),
+      content=types.Content(
+          parts=[Part(text='{"custom_output2": "response2"}')]
+      ),
   )
   agent._LlmAgent__maybe_save_output_to_state(event2)
   assert event2.actions.state_delta['test_output'] == {
