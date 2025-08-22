@@ -220,7 +220,7 @@ def test_custom_schema():
     'env_variables',
     [
         'GOOGLE_AI',
-        # 'VERTEX'
+        'VERTEX'
     ],
     indirect=True,
 )
@@ -525,7 +525,7 @@ def test_agent_tool_response_schema_with_input_schema_no_output_vertex_ai():
     'env_variables',
     [
         'GOOGLE_AI',
-        # 'VERTEX'
+        'VERTEX'
     ],
     indirect=True,
 )
@@ -574,6 +574,7 @@ def test_custom_schema_with_union_input():
     'env_variables',
     [
         'GOOGLE_AI',
+        'Vertex'
     ],
     indirect=True,
 )
